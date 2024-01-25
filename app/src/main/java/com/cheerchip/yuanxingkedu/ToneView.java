@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
@@ -23,10 +24,10 @@ public class ToneView extends View {
     private Bitmap tonedefault;
     private Bitmap tone_yellow;
     private Paint paint;
+    private Paint textPaint;
     private Bitmap tone_knob;
     private Bitmap tone_knobdisc;
-    private float degree;
-    private float degrees;
+    private float degrees;//-145~145
     private float markPointX;
     private float markPointY;
     private int paddingwidth;
@@ -34,7 +35,7 @@ public class ToneView extends View {
     private int viwwidth;
     private int viewheight;
     private int paddingheight2;
-
+    String txt = "";
     public ToneView(Context context) {
         super(context);
       //  init();
@@ -58,12 +59,13 @@ public class ToneView extends View {
     private void init() {
         //cx，cy是相对于屏幕的距离
         Log.e( "init: ",this.getX()+","+this.getY() );
-        cx =this.getWidth()/2+this.getX();
+
         int[] location = new  int[2] ;
         getLocationInWindow(location); //获取在当前窗口内的绝对坐标
         getLocationOnScreen(location);//获取在整个屏幕内的绝对坐标
         System.out.println("view--->x坐标:"+location [0]+"view--->y坐标:"+location [1]);
-        cy =this.getHeight()/2+location [1];
+        cx =this.viwwidth/2+location[0];
+        cy =this.viewheight/2-location [1];
         //两个圆图
         tonedefault = BitmapFactory.decodeResource(getResources(), R.mipmap.tone_knob_d);
         tone_yellow = BitmapFactory.decodeResource(getResources(), R.mipmap.tone_knob_2);
@@ -73,6 +75,9 @@ public class ToneView extends View {
         tone_knobdisc = BitmapFactory.decodeResource(getResources(), R.mipmap.tone_knob_disc);
         paint = new Paint();
         paint.setAntiAlias(true);
+        textPaint = new Paint();
+        textPaint.setTextSize(18);
+        textPaint.setColor(Color.YELLOW);
     }
 
     @Override
@@ -83,12 +88,13 @@ public class ToneView extends View {
         if(viwwidth >0){
             init();
             //改变大小时对图片大小进行缩放
-            tonedefault= Graphics.scale(tonedefault, viwwidth -180, viewheight -180);
-            tone_yellow= Graphics.scale(tone_yellow, viwwidth -180, viewheight -180);
+            tonedefault= Graphics.scale(tonedefault, viwwidth -viwwidth/10, viewheight -viewheight/10);
+           // tone_yellow= Graphics.scale(tone_yellow, viwwidth -180, viewheight -180);
+            tone_yellow= Graphics.scale(tone_yellow, viwwidth -viwwidth/10, viewheight -viewheight/10);
             tone_knobdisc= Graphics.scale(tone_knobdisc, viwwidth, viewheight);
             tone_knob= Graphics.scale(tone_knob, viwwidth /2, viewheight /2);
-            paddingwidth =(getWidth()-tone_yellow.getWidth())/2;
-            paddingheight =(getHeight()-tone_yellow.getHeight())/2;
+            paddingwidth =(viwwidth-tone_yellow.getWidth())/2;
+            paddingheight =(viewheight-tone_yellow.getHeight())/2;
             //计算黄色圆心需要用
             paddingheight2 = viewheight /2-paddingheight;
         }
@@ -106,15 +112,23 @@ public class ToneView extends View {
             Bitmap bitmapsrcin = srcin(tone_yellow, 120, (int) (degrees + 151));
             canvas.drawBitmap(bitmapsrcin, paddingwidth, paddingheight, paint);
             Bitmap bitmapsrcout = srcout(tonedefault, 123, (int) (degrees + 146));
+
             //画按钮
             canvas.save();
             Log.e("onDraw: ", degrees + "");
-            canvas.rotate(degrees, getWidth() / 2, getHeight() / 2);
+
+            canvas.rotate(degrees, viwwidth / 2, viewheight / 2);
             if (getWidth() != 0) {
                 Log.e("onDraw: ", viwwidth + "");
                 canvas.drawBitmap(tone_knob, viwwidth / 4, viewheight / 4, null);
+
             }
+
+
             canvas.restore();
+
+            float textWidth =   textPaint.measureText(txt);
+            canvas.drawText(txt,viwwidth / 2 -textWidth/2, viewheight / 2+viewheight /16,textPaint);
         }
     }
 
@@ -126,7 +140,7 @@ public class ToneView extends View {
      * @return
      */
     private Bitmap srcout(Bitmap tonedefault, int i, int i1) {
-        Bitmap bitmap3 = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+        Bitmap bitmap3 = Bitmap.createBitmap(viwwidth, viewheight, Bitmap.Config.ARGB_8888);
         Canvas canvas2 = new Canvas(bitmap3);
         paint.setFilterBitmap(true);
         paint.setDither(true);
@@ -168,8 +182,10 @@ public class ToneView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (true) {
-            float x = event.getRawX();
-            float y = event.getRawY();
+            float x = event.getX();
+            float y = event.getY();
+            cy=viewheight/2;
+            cx=viwwidth/2;
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     getdegree(x, y);
@@ -192,8 +208,6 @@ public class ToneView extends View {
         //     return super.onTouchEvent(event);
     }
 
-
-
     /**
      * float x = event.getRawX();
      * float y = event.getRawY();
@@ -202,7 +216,7 @@ public class ToneView extends View {
      */
     public void getdegree(float x, float y){
         degrees = (float) ((float) ((Math.toDegrees(Math.atan2(
-                x - cx, cy-y)) + 360.0)) % 360.0);
+                x - cx, cy - y)) + 360.0)) % 360.0);
         if (degrees>=146 && degrees<=217){
             degrees =-146;
         }
@@ -211,7 +225,7 @@ public class ToneView extends View {
         }
        // degrees
     }
-   private OnDegreeChangeLisener onDegreeChangeLisener;
+    private OnDegreeChangeLisener onDegreeChangeLisener;
 
     public OnDegreeChangeLisener getOnDegreeChangeLisener() {
         return onDegreeChangeLisener;
@@ -221,7 +235,15 @@ public class ToneView extends View {
         this.onDegreeChangeLisener = onDegreeChangeLisener;
     }
 
-   public interface OnDegreeChangeLisener{
+    public void setDegrees(float degrees) {
+        this.degrees = degrees;
+    }
+
+    public void setTxt(String txt) {
+        this.txt = txt;
+    }
+
+    public interface OnDegreeChangeLisener{
        void onDegreeChangeLisener(float degree);
     }
 }
